@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@braks/vue-flow": "^0.4.38",
+    "@codemirror/lang-sql": "^6.3.0",
+    "@codemirror/theme-one-dark": "^6.1.0",
     "element-plus": "^2.2.15",
     "node-sql-parser": "^4.4.0",
     "vue": "^3.2.37",
