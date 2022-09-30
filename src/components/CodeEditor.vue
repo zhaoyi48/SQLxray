@@ -23,6 +23,7 @@ const activities = ref([]);
 provide('map', activities);
 const infoTree = ref({});
 const yBias = ref(1);
+const tmpCounter = ref(1);
 
 const code = ref(`select * from test;`)
 const extensions = [sql(), oneDark]
@@ -57,7 +58,7 @@ function xray(sqls) {
                 console.log('change', ast);
 
                 if (ast.type == 'select') {
-                    this.selectAST(ast, null,true)
+                    this.selectAST(ast, null, true)
                 }
 
                 if (ast.type == 'insert') {
@@ -75,7 +76,7 @@ function xray(sqls) {
 
 }
 
-function selectAST(ast, exLink,linkAnimated) {
+function selectAST(ast, bfAst) {
     var maxXbias = 0;
     ast.from.forEach(data => {
         const tablename = ((data.db != null) ? (data.db + '.') : '') + data.table;
@@ -85,11 +86,9 @@ function selectAST(ast, exLink,linkAnimated) {
             }
         }
     });
-    let bf='';
     ast.from.forEach(data => {
         if (data.expr == undefined) {
             const tablename = ((data.db != null) ? (data.db + '.') : '') + data.table;
-            bf=tablename;
             if (!this.infoTree[`${tablename}`]) {
                 this.infoTree[`${tablename}`] = {
                     xBias: `${++maxXbias}`,
@@ -107,20 +106,13 @@ function selectAST(ast, exLink,linkAnimated) {
             }
         } else {
             if (data.expr.ast.type == 'select') {
-                if(exLink==null){
-                    exLink=bf;
-                }
-                this.selectAST(data.expr.ast, exLink,linkAnimated);
+                this.selectAST(data.expr.ast, ast);
             }
-            // if (ast.type == 'insert') {
-            //     insertAST(ast)
-            // }
 
         }
 
     });
-
-    this.genEdge(ast, true, exLink,linkAnimated);
+    this.genEdge(ast, bfAst, null);
 
 }
 
@@ -137,7 +129,6 @@ function insertAST(ast) {
 
     ast.table.forEach(data => {
         const baseTablename = ((data.db != null) ? (data.db + '.') : '') + data.table;
-        const exLink = baseTablename;
         if (!this.infoTree[`${baseTablename}`]) {
             this.infoTree[`${baseTablename}`] = {
                 xBias: `${++maxXbias}`,
@@ -153,122 +144,177 @@ function insertAST(ast) {
             this.activities.push(newNode);
             this.yBias++;
         }
-        ast.values.from.forEach(data => {
-            if (data.expr == undefined) {
 
-                const tablename = ((data.db != null) ? (data.db + '.') : '') + data.table;
-                if (!this.infoTree[`${tablename}`]) {
-                    this.infoTree[`${tablename}`] = {
-                        xBias: `${++maxXbias}`,
-                        yBias: `${this.yBias}`,
-                        sourceTable: []
-                    }
-                    const newNode = {
-                        id: tablename,
-                        label: `${tablename}`,
-                        position: { x: 0, y: 0 },
-                    }
-                    newNode.position = { x: this.infoTree[`${tablename}`].xBias * 100, y: this.infoTree[`${tablename}`].yBias * 100 }
-                    this.activities.push(newNode);
-                    this.infoTree[`${baseTablename}`].sourceTable.push(tablename);
-                    const linkEdge = {
-                        id: `${baseTablename}-${tablename}`,
-                        source: `${baseTablename}`,
-                        target: `${tablename}`,
-                        style: (edge) => {
-                            if (!edge.sourceNode.selected && !edge.targetNode.selected) return
-                            return { stroke: '#10b981', strokeWidth: 3 }
-                        },
-                        // animated: true,
-                    }
-                    this.activities.push(linkEdge);
-                    this.yBias++;
-                } else {
-                    const linkEdge = {
-                        id: `${baseTablename}-${tablename}`,
-                        source: `${baseTablename}`,
-                        target: `${tablename}`,
-                        style: (edge) => {
-                            if (!edge.sourceNode.selected && !edge.targetNode.selected) return
-                            return { stroke: '#10b981', strokeWidth: 3 }
-                        },
-                        // animated: true,
-                    }
-                    this.activities.push(linkEdge);
-                }
+        this.selectAST(ast.values, ast);
 
-            } else {
-                if (data.expr.ast.type == 'select') {
-                    this.selectAST(data.expr.ast, exLink,false);
-                }
-                // if (ast.type == 'insert') {
-                //     insertAST(ast)
-                // }
-            }
+        // ast.values.from.forEach(data => {
+        //     if (data.expr == undefined) {
 
-        });
+        //         const tablename = ((data.db != null) ? (data.db + '.') : '') + data.table;
+        //         if (!this.infoTree[`${tablename}`]) {
+        //             this.infoTree[`${tablename}`] = {
+        //                 xBias: `${++maxXbias}`,
+        //                 yBias: `${this.yBias}`,
+        //                 sourceTable: []
+        //             }
+        //             const newNode = {
+        //                 id: tablename,
+        //                 label: `${tablename}`,
+        //                 position: { x: 0, y: 0 },
+        //             }
+        //             newNode.position = { x: this.infoTree[`${tablename}`].xBias * 100, y: this.infoTree[`${tablename}`].yBias * 100 }
+        //             this.activities.push(newNode);
+        //             this.infoTree[`${baseTablename}`].sourceTable.push(tablename);
+        //             const linkEdge = {
+        //                 id: `${baseTablename}-${tablename}`,
+        //                 source: `${baseTablename}`,
+        //                 target: `${tablename}`,
+        //                 style: (edge) => {
+        //                     if (!edge.sourceNode.selected && !edge.targetNode.selected) return
+        //                     return { stroke: '#10b981', strokeWidth: 3 }
+        //                 },
+        //                 // animated: true,
+        //             }
+        //             this.activities.push(linkEdge);
+        //             this.yBias++;
+        //         } else {
+        //             const linkEdge = {
+        //                 id: `${baseTablename}-${tablename}`,
+        //                 source: `${baseTablename}`,
+        //                 target: `${tablename}`,
+        //                 style: (edge) => {
+        //                     if (!edge.sourceNode.selected && !edge.targetNode.selected) return
+        //                     return { stroke: '#10b981', strokeWidth: 3 }
+        //                 },
+        //                 // animated: true,
+        //             }
+        //             this.activities.push(linkEdge);
+        //         }
+
+        //     } else {
+        //         if (data.expr.ast.type == 'select') {
+        //             this.selectAST(data.expr.ast,ast,false);
+        //         }
+        //         // if (ast.type == 'insert') {
+        //         //     insertAST(ast)
+        //         // }
+        //     }
+
+        // });
 
 
     });
 }
 
-function genEdge(ast, animated, exLink,linkAnimated) {
-    if (ast.from.length > 1 || exLink != null) {
-        let bf = '';
-        for (let index = 0; index < ast.from.length; index++) {
-            let data = ast.from[index];
-            if (data.expr == undefined) {
-                if (index == 0) {
-                    bf = ((data.db != null) ? (data.db + '.') : '') + data.table;
-                    if (exLink != null && bf!=exLink) {
-                        const linkEdge = {
-                            id: `${exLink}-${bf}`,
-                            source: `${exLink}`,
-                            target: `${bf}`,
-                            style: (edge) => {
-                                if (!edge.sourceNode.selected && !edge.targetNode.selected) return
-                                return { stroke: '#10b981', strokeWidth: 3 }
-                            },
-                            animated: `${linkAnimated}`,
-                        }
-                        this.activities.push(linkEdge);
-                    }
-                } else {
-                    const cur = ((data.db != null) ? (data.db + '.') : '') + data.table;
-                    const linkEdge = {
-                        id: `${bf}-${cur}`,
-                        source: `${bf}`,
-                        target: `${cur}`,
-                        animated: `${animated}`,
-                        style: (edge) => {
-                            if (!edge.sourceNode.selected && !edge.targetNode.selected) return
-                            return { stroke: '#10b981', strokeWidth: 3 }
-                        },
-                    }
+function genEdge(ast, bfAst, bfnode) {
+    if (bfAst != null && bfAst.type == 'insert') {
+        bfAst.table.forEach(data => {
+            const baseTablename = ((data.db != null) ? (data.db + '.') : '') + data.table;
+            if (ast.from.length > 0) {
+                let bf = '';
+                for (let index = 0; index < ast.from.length; index++) {
+                    let data = ast.from[index];
+                    if (data.expr == undefined) {
+                        if (index == 0) {
+                            bf = ((data.db != null) ? (data.db + '.') : '') + data.table;
+                            const linkEdge = {
+                                id: `${baseTablename}-${bf}`,
+                                source: `${baseTablename}`,
+                                target: `${bf}`,
+                                style: (edge) => {
+                                    if (!edge.sourceNode.selected && !edge.targetNode.selected) return
+                                    return { stroke: '#10b981', strokeWidth: 3 }
+                                },
+                                animated: false,
+                            }
+                            this.activities.push(linkEdge);
+                        } else {
+                            const cur = ((data.db != null) ? (data.db + '.') : '') + data.table;
+                            const linkEdge = {
+                                id: `${bf}-${cur}`,
+                                source: `${bf}`,
+                                target: `${cur}`,
+                                animated: true,
+                                style: (edge) => {
+                                    if (!edge.sourceNode.selected && !edge.targetNode.selected) return
+                                    return { stroke: '#10b981', strokeWidth: 3 }
+                                },
+                            }
 
-                    this.activities.push(linkEdge);
+                            this.activities.push(linkEdge);
 
-                    if (exLink != null) {
-                        const linkEdge = {
-                            id: `${exLink}-${cur}`,
-                            source: `${exLink}`,
-                            target: `${cur}`,
-                            style: (edge) => {
-                                if (!edge.sourceNode.selected && !edge.targetNode.selected) return
-                                return { stroke: '#10b981', strokeWidth: 3 }
-                            },
-                            animated: `${linkAnimated}`,
+                            const exlinkEdge = {
+                                id: `${baseTablename}-${cur}`,
+                                source: `${baseTablename}`,
+                                target: `${cur}`,
+                                style: (edge) => {
+                                    if (!edge.sourceNode.selected && !edge.targetNode.selected) return
+                                    return { stroke: '#10b981', strokeWidth: 3 }
+                                },
+                                animated: false,
+                            }
+                            this.activities.push(exlinkEdge);
+
                         }
-                        this.activities.push(linkEdge);
+                    } else {
+                        this.genEdge(data.expr.ast, bfAst, null);
                     }
 
                 }
-            } else {
-                this.genEdge(data.expr.ast, exLink,linkAnimated);
+
+            }
+        });
+
+    } else {
+        if (ast.from.length > 0) {
+            let bf = bfnode != null ? bfnode : '';
+            for (let index = 0; index < ast.from.length; index++) {
+                let data = ast.from[index];
+                if (data.expr == undefined) {
+                    if (index == 0 && bf == '') {
+                        bf = ((data.db != null) ? (data.db + '.') : '') + data.table;
+                    } else {
+                        const cur = ((data.db != null) ? (data.db + '.') : '') + data.table;
+                        const linkEdge = {
+                            id: `${bf}-${cur}`,
+                            source: `${bf}`,
+                            target: `${cur}`,
+                            animated: true,
+                            style: (edge) => {
+                                if (!edge.sourceNode.selected && !edge.targetNode.selected) return
+                                return { stroke: '#10b981', strokeWidth: 3 }
+                            },
+                        }
+
+                        this.activities.push(linkEdge);
+
+                    }
+                } else {
+                    if (index == 0) {
+                        //create tmp-table node
+                        const tablename='AUTOGEN_tmp'+this.tmpCounter;
+                        this.infoTree[`${tablename}`] = {
+                            xBias: 0,
+                            yBias: `${this.yBias}`,
+                            sourceTable: []
+                        }
+                        const newNode = {
+                            id: tablename,
+                            label: `${tablename}`,
+                            position: { x: 0, y: 0 },
+                        }
+                        newNode.position = { x: this.infoTree[`${tablename}`].xBias * 100, y: this.infoTree[`${tablename}`].yBias * 100 }
+                        this.activities.push(newNode);
+                        this.yBias++;
+                        this.tmpCounter++;
+                        bf=tablename;
+                    }
+                    this.genEdge(data.expr.ast, bfAst, bf);
+                }
+
             }
 
         }
-
     }
 }
 
