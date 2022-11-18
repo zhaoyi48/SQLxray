@@ -3,13 +3,14 @@
     <VueFlow v-model="elements">
         <MiniMap />
         <Controls :showInteractive="false" />
-        <Background :variant="BackgroundVariant.Lines" />
+        <Background pattern-color="#aaa" gap="8" />
     </VueFlow>
 
 </template>
 
 <script setup>
-import { Background, BackgroundVariant, Controls, MiniMap, VueFlow, useVueFlow } from '@braks/vue-flow'
+import { VueFlow, useVueFlow } from '@vue-flow/core'
+import { Background ,Controls, MiniMap } from '@vue-flow/additional-components'
 import { provide,inject, ref, shallowRef } from 'vue'
 
 const elements = inject('map')
