@@ -21,9 +21,9 @@ import { Parser } from '@florajs/sql-parser'
 
 const activities = ref([]);
 provide('map', activities);
-const infoTree = ref({});
-const yBias = ref(1);
-const tmpCounter = ref(1);
+let infoTree = {};
+let yBias = 1;
+let tmpCounter = 1;
 
 const code = ref(`select * from test;`)
 const extensions = [sql(), oneDark]
@@ -47,8 +47,8 @@ const getCodemirrorStates = () => {
 }
 
 function xray(sqls) {
-    this.infoTree = {};
-    this.yBias = 1;
+    infoTree = {};
+    yBias = 1;
     this.activities.length = 0;
     sqls.split(';').forEach(sql => {
         if (sql.trim() != '') {
@@ -80,19 +80,19 @@ function selectAST(ast, bfAst) {
     var maxXbias = 0;
     ast.from.forEach(data => {
         const tablename = ((data.db != null) ? (data.db + '.') : '') + data.table;
-        if (this.infoTree[`${tablename}`]) {
-            if (maxXbias < this.infoTree[`${tablename}`].xBias) {
-                maxXbias = this.infoTree[`${tablename}`].xBias;
+        if (infoTree[`${tablename}`]) {
+            if (maxXbias < infoTree[`${tablename}`].xBias) {
+                maxXbias = infoTree[`${tablename}`].xBias;
             }
         }
     });
     ast.from.forEach(data => {
         if (data.expr == undefined) {
             const tablename = ((data.db != null) ? (data.db + '.') : '') + data.table;
-            if (!this.infoTree[`${tablename}`]) {
-                this.infoTree[`${tablename}`] = {
+            if (!infoTree[`${tablename}`]) {
+                infoTree[`${tablename}`] = {
                     xBias: `${++maxXbias}`,
-                    yBias: `${this.yBias}`,
+                    yBias: `${yBias}`,
                     sourceTable: []
                 }
                 const newNode = {
@@ -100,9 +100,9 @@ function selectAST(ast, bfAst) {
                     label: `${tablename}`,
                     position: { x: 0, y: 0 },
                 }
-                newNode.position = { x: this.infoTree[`${tablename}`].xBias * 100, y: this.infoTree[`${tablename}`].yBias * 100 }
+                newNode.position = { x: infoTree[`${tablename}`].xBias * 100, y: infoTree[`${tablename}`].yBias * 100 }
                 this.activities.push(newNode);
-                this.yBias++;
+                yBias++;
             }
         } else {
             if (data.expr.ast.type == 'select') {
@@ -120,19 +120,19 @@ function insertAST(ast) {
     var maxXbias = 0;
     ast.table.forEach(data => {
         const tablename = ((data.db != null) ? (data.db + '.') : '') + data.table;
-        if (this.infoTree[`${tablename}`]) {
-            if (maxXbias < this.infoTree[`${tablename}`].xBias) {
-                maxXbias = this.infoTree[`${tablename}`].xBias;
+        if (infoTree[`${tablename}`]) {
+            if (maxXbias < infoTree[`${tablename}`].xBias) {
+                maxXbias = infoTree[`${tablename}`].xBias;
             }
         }
     });
 
     ast.table.forEach(data => {
         const baseTablename = ((data.db != null) ? (data.db + '.') : '') + data.table;
-        if (!this.infoTree[`${baseTablename}`]) {
-            this.infoTree[`${baseTablename}`] = {
+        if (!infoTree[`${baseTablename}`]) {
+            infoTree[`${baseTablename}`] = {
                 xBias: `${++maxXbias}`,
-                yBias: `${this.yBias}`,
+                yBias: `${yBias}`,
                 sourceTable: []
             }
             const newNode = {
@@ -140,9 +140,9 @@ function insertAST(ast) {
                 label: `${baseTablename}`,
                 position: { x: 0, y: 0 },
             }
-            newNode.position = { x: this.infoTree[`${baseTablename}`].xBias * 100, y: this.infoTree[`${baseTablename}`].yBias * 100 }
+            newNode.position = { x: infoTree[`${baseTablename}`].xBias * 100, y: infoTree[`${baseTablename}`].yBias * 100 }
             this.activities.push(newNode);
-            this.yBias++;
+            yBias++;
         }
 
         this.selectAST(ast.values, ast);
@@ -292,10 +292,10 @@ function genEdge(ast, bfAst, bfnode) {
                 } else {
                     if (index == 0) {
                         //create tmp-table node
-                        const tablename='AUTOGEN_tmp'+this.tmpCounter;
-                        this.infoTree[`${tablename}`] = {
+                        const tablename='AUTOGEN_tmp'+tmpCounter;
+                        infoTree[`${tablename}`] = {
                             xBias: 0,
-                            yBias: `${this.yBias}`,
+                            yBias: `${yBias}`,
                             sourceTable: []
                         }
                         const newNode = {
@@ -303,10 +303,10 @@ function genEdge(ast, bfAst, bfnode) {
                             label: `${tablename}`,
                             position: { x: 0, y: 0 },
                         }
-                        newNode.position = { x: this.infoTree[`${tablename}`].xBias * 100, y: this.infoTree[`${tablename}`].yBias * 100 }
+                        newNode.position = { x: infoTree[`${tablename}`].xBias * 100, y: infoTree[`${tablename}`].yBias * 100 }
                         this.activities.push(newNode);
-                        this.yBias++;
-                        this.tmpCounter++;
+                        yBias++;
+                        tmpCounter++;
                         bf=tablename;
                     }
                     this.genEdge(data.expr.ast, bfAst, bf);
