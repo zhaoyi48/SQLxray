@@ -17,7 +17,7 @@ import { Codemirror } from 'vue-codemirror'
 import { sql } from '@codemirror/lang-sql'
 import { oneDark } from '@codemirror/theme-one-dark'
 import SqlFlow from './SqlFlow.vue'
-import { Parser } from 'node-sql-parser'
+import { Parser } from '@florajs/sql-parser'
 
 const activities = ref([]);
 provide('map', activities);
@@ -54,7 +54,7 @@ function xray(sqls) {
         if (sql.trim() != '') {
             try {
                 const parser = new Parser();
-                const ast = parser.astify(sql);
+                const ast = parser.parse(sql);
                 console.log('change', ast);
 
                 if (ast.type == 'select') {
