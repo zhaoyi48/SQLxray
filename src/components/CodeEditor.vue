@@ -19,7 +19,7 @@ import { oneDark } from '@codemirror/theme-one-dark'
 import SqlFlow from './SqlFlow.vue'
 import { Parser } from '@florajs/sql-parser'
 
-const activities = ref([]);
+let activities = ref([]);
 provide('map', activities);
 let infoTree = {};
 let yBias = 1;
@@ -49,7 +49,7 @@ const getCodemirrorStates = () => {
 function xray(sqls) {
     infoTree = {};
     yBias = 1;
-    this.activities.length = 0;
+    activities.value.length = 0;
     sqls.split(';').forEach(sql => {
         if (sql.trim() != '') {
             try {
@@ -67,10 +67,10 @@ function xray(sqls) {
 
 
             } catch (error) {
-                this.activities.length = 0;
+                activities.value.length = 0;
                 console.error(error);
             }
-            console.log('change', this.activities);
+            console.log('change', activities.value);
         }
     });
 
@@ -101,7 +101,7 @@ function selectAST(ast, bfAst) {
                     position: { x: 0, y: 0 },
                 }
                 newNode.position = { x: infoTree[`${tablename}`].xBias * 100, y: infoTree[`${tablename}`].yBias * 100 }
-                this.activities.push(newNode);
+                activities.value.push(newNode);
                 yBias++;
             }
         } else {
@@ -141,7 +141,7 @@ function insertAST(ast) {
                 position: { x: 0, y: 0 },
             }
             newNode.position = { x: infoTree[`${baseTablename}`].xBias * 100, y: infoTree[`${baseTablename}`].yBias * 100 }
-            this.activities.push(newNode);
+            activities.value.push(newNode);
             yBias++;
         }
 
@@ -163,7 +163,7 @@ function insertAST(ast) {
         //                 position: { x: 0, y: 0 },
         //             }
         //             newNode.position = { x: this.infoTree[`${tablename}`].xBias * 100, y: this.infoTree[`${tablename}`].yBias * 100 }
-        //             this.activities.push(newNode);
+        //             activities.value.push(newNode);
         //             this.infoTree[`${baseTablename}`].sourceTable.push(tablename);
         //             const linkEdge = {
         //                 id: `${baseTablename}-${tablename}`,
@@ -175,7 +175,7 @@ function insertAST(ast) {
         //                 },
         //                 // animated: true,
         //             }
-        //             this.activities.push(linkEdge);
+        //             activities.value.push(linkEdge);
         //             this.yBias++;
         //         } else {
         //             const linkEdge = {
@@ -188,7 +188,7 @@ function insertAST(ast) {
         //                 },
         //                 // animated: true,
         //             }
-        //             this.activities.push(linkEdge);
+        //             activities.value.push(linkEdge);
         //         }
 
         //     } else {
@@ -227,7 +227,7 @@ function genEdge(ast, bfAst, bfnode) {
                                 },
                                 animated: false,
                             }
-                            this.activities.push(linkEdge);
+                            activities.value.push(linkEdge);
                         } else {
                             const cur = ((data.db != null) ? (data.db + '.') : '') + data.table;
                             const linkEdge = {
@@ -241,7 +241,7 @@ function genEdge(ast, bfAst, bfnode) {
                                 },
                             }
 
-                            this.activities.push(linkEdge);
+                            activities.value.push(linkEdge);
 
                             const exlinkEdge = {
                                 id: `${baseTablename}-${cur}`,
@@ -253,7 +253,7 @@ function genEdge(ast, bfAst, bfnode) {
                                 },
                                 animated: false,
                             }
-                            this.activities.push(exlinkEdge);
+                            activities.value.push(exlinkEdge);
 
                         }
                     } else {
@@ -286,7 +286,7 @@ function genEdge(ast, bfAst, bfnode) {
                             },
                         }
 
-                        this.activities.push(linkEdge);
+                        activities.value.push(linkEdge);
 
                     }
                 } else {
@@ -304,7 +304,7 @@ function genEdge(ast, bfAst, bfnode) {
                             position: { x: 0, y: 0 },
                         }
                         newNode.position = { x: infoTree[`${tablename}`].xBias * 100, y: infoTree[`${tablename}`].yBias * 100 }
-                        this.activities.push(newNode);
+                        activities.value.push(newNode);
                         yBias++;
                         tmpCounter++;
                         bf=tablename;
